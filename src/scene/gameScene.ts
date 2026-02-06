@@ -483,11 +483,28 @@ export class GameScene extends BaseScene {
 	protected handlerToLoad(): void {
 		const backRect = new g.FilledRect({
 			scene: this,
-			cssColor: "white",
+			cssColor: "#0b2a1f",
 			width: g.game.width,
 			height: g.game.height
 		});
 		this.append(backRect);
+		const topShade = new g.FilledRect({
+			scene: this,
+			cssColor: "#071a13",
+			width: g.game.width,
+			height: 0.08 * g.game.height,
+			opacity: 0.6
+		});
+		this.append(topShade);
+		const bottomShade = new g.FilledRect({
+			scene: this,
+			cssColor: "#071a13",
+			width: g.game.width,
+			height: 0.14 * g.game.height,
+			y: 0.86 * g.game.height,
+			opacity: 0.65
+		});
+		this.append(bottomShade);
 		this.pokerTableEntity = this.createPokerTableEntity({ x: 0, y: 0.1 * g.game.height, width: g.game.width, height: 0.7 * g.game.height });
 		this.append(this.pokerTableEntity);
 		this.pokerPhaseEntity = this.createPhaseEntity({ x: 0.7 * g.game.width, y: 0, width: 0.3 * g.game.width, height: 0.1 * g.game.height });
@@ -532,6 +549,7 @@ export class GameScene extends BaseScene {
 			local: true
 		});
 		this.sprites["bet_up"].onPointDown.add(createBetUpClickHandler(this));
+		this.attachButtonFeedback(this.sprites["bet_up"], { pressedScale: 0.92, pressedOpacity: 0.85 });
 		controllerEntity.append(this.sprites["bet_up"]);
 		this.sprites["bet_down"] = new g.Sprite({
 			scene: this,
@@ -545,6 +563,7 @@ export class GameScene extends BaseScene {
 			local: true
 		});
 		this.sprites["bet_down"].onPointDown.add(createBetDownClickHandler(this));
+		this.attachButtonFeedback(this.sprites["bet_down"], { pressedScale: 0.92, pressedOpacity: 0.85 });
 		controllerEntity.append(this.sprites["bet_down"]);
 		const betSliderConfig = g.game._configuration.assets["bet_slider"] as g.ImageAssetConfigurationBase;
 		this.sprites["bet_slider"] = new g.Sprite({
@@ -587,6 +606,16 @@ export class GameScene extends BaseScene {
 			});
 			this.labels[BUTTON_PREFIX_KEY + key] = label;
 			this.sprites[BUTTON_PREFIX_KEY + key].append(label);
+			this.attachButtonFeedback(this.sprites[BUTTON_PREFIX_KEY + key], {
+				onPress: () => {
+					label.textColor = "#f5d76e";
+					label.invalidate();
+				},
+				onRelease: () => {
+					label.textColor = "white";
+					label.invalidate();
+				}
+			});
 			this.sprites[BUTTON_PREFIX_KEY + key].onPointUp.add(createActionButtonClickHandler(
 				this,
 				convertToTexasHoldemAction(key)
@@ -619,6 +648,16 @@ export class GameScene extends BaseScene {
 			});
 			this.labels[BUTTON_PREFIX_KEY + key] = label;
 			this.sprites[BUTTON_PREFIX_KEY + key].append(label);
+			this.attachButtonFeedback(this.sprites[BUTTON_PREFIX_KEY + key], {
+				onPress: () => {
+					label.textColor = "#f5d76e";
+					label.invalidate();
+				},
+				onRelease: () => {
+					label.textColor = "white";
+					label.invalidate();
+				}
+			});
 			this.sprites[BUTTON_PREFIX_KEY + key].onPointUp.add(createRaiseButtonClickHandler(
 				this,
 				convertToRaiseActionPattern(key)

@@ -35,7 +35,7 @@ export class RuleScene extends BaseScene {
 		// TODO: ここでルール表示
 		const backRect = new g.FilledRect({
 			scene: this,
-			cssColor: "white",
+			cssColor: "#0b2a1f",
 			width: g.game.width,
 			height: g.game.height
 		});
@@ -45,7 +45,7 @@ export class RuleScene extends BaseScene {
 			text: "CPUとのテキサスホールデム(リングゲーム)を開始します\nプレイヤー同士の対戦はニコ生ゲーム上で行えます",
 			font: basicFont,
 			fontSize: 32,
-			textColor: "black",
+			textColor: "#f7f2e8",
 			textAlign: "center",
 			width: g.game.width,
 			y: 0.1 * g.game.width,

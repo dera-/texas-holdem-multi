@@ -27,6 +27,14 @@ const gameTermSelectorItems: SelectorItem[] = [
 	{ name: "普通", value: "middle"},
 	{ name: "長め", value: "long"}
 ];
+const COLOR_BG = "#0b2a1f";
+const COLOR_PANEL = "#103625";
+const COLOR_PANEL_SHADOW = "#071a13";
+const COLOR_TEXT = "#f7f2e8";
+const COLOR_GOLD = "#d4af37";
+const COLOR_GOLD_DARK = "#b38c2d";
+const COLOR_BUTTON = "#1b4b32";
+const COLOR_BUTTON_ACTIVE = "#d4af37";
 export class RecruitmentScene extends BaseScene {
 	private entry: tool.AkashicEntry;
 	private gameMode: GameMode;
@@ -53,11 +61,45 @@ export class RecruitmentScene extends BaseScene {
 	protected handlerToLoad(): void {
 		const backRect = new g.FilledRect({
 			scene: this,
-			cssColor: "white",
+			cssColor: COLOR_BG,
 			width: g.game.width,
 			height: g.game.height
 		});
 		this.append(backRect);
+		const band = new g.FilledRect({
+			scene: this,
+			cssColor: COLOR_GOLD,
+			width: 1.2 * g.game.width,
+			height: 0.16 * g.game.height,
+			x: -0.1 * g.game.width,
+			y: 0.12 * g.game.height,
+			opacity: 0.12,
+			angle: -8
+		});
+		this.append(band);
+		const chipAsset = this.asset.getImageById("chip");
+		const chipLeft = new g.Sprite({
+			scene: this,
+			src: chipAsset,
+			width: 90,
+			height: 90,
+			x: 0.04 * g.game.width,
+			y: 0.78 * g.game.height,
+			opacity: 0.55,
+			angle: -14
+		});
+		const chipRight = new g.Sprite({
+			scene: this,
+			src: chipAsset,
+			width: 70,
+			height: 70,
+			x: 0.88 * g.game.width,
+			y: 0.08 * g.game.height,
+			opacity: 0.5,
+			angle: 22
+		});
+		this.append(chipLeft);
+		this.append(chipRight);
 		const contributerEntity = this.createContributerPane();
 		const audienceEntity = this.createAudiencePane();
 		let isJoined: boolean = false;
@@ -144,36 +186,34 @@ export class RecruitmentScene extends BaseScene {
 			GAME_TERM_KEY,
 			gameTermSelectorItems
 		));
-		const startButton = new g.FilledRect({
-			scene: this,
-			cssColor: "gray",
+		const startButton = this.createButtonEntity({
 			x: 0.4 * g.game.width,
 			y: 0.8 * g.game.height,
 			width: 0.2 * g.game.width,
 			height: 0.1 * g.game.height,
-			opacity: 0.5,
-			local: true,
-			touchable: true
-		});
-		const startLabel = new Label({
-			scene: this,
-			text: "ゲーム開始",
-			font: basicFont,
+			label: "ゲーム開始",
 			fontSize: 24,
-			textColor: "black",
-			textAlign: "center",
-			width: 0.2 * g.game.width,
-			y: 0.05 * startButton.height,
-			local: true
+			baseColor: COLOR_GOLD_DARK,
+			textColor: "#2b1d06"
 		});
-		startButton.onPointUp.add(() => {
+		startButton.entity.opacity = 0.85;
+		startButton.entity.onPointUp.add(() => {
 			// TODO: 参加希望2人未満ならボタンをdisableにする
 			if (this.entry.getEnteredMenmberCount() >= 2) {
 				this.entry.decidePlayableMembers();
 			}
 		});
-		startButton.append(startLabel);
-		entity.append(startButton);
+		this.attachButtonFeedback(startButton.entity, {
+			onPress: () => {
+				startButton.shine.opacity = 0.4;
+				startButton.shine.modified();
+			},
+			onRelease: () => {
+				startButton.shine.opacity = 0.22;
+				startButton.shine.modified();
+			}
+		});
+		entity.append(startButton.entity);
 
 		return entity;
 	}
@@ -191,7 +231,7 @@ export class RecruitmentScene extends BaseScene {
 			text: "ゲーム種別: ",
 			font: basicFont,
 			fontSize: 32,
-			textColor: "black",
+			textColor: COLOR_TEXT,
 			textAlign: "left",
 			width: 0.9 * g.game.width,
 			x: 0.2 * g.game.width,
@@ -214,7 +254,7 @@ export class RecruitmentScene extends BaseScene {
 			text: "ゲーム時間: ",
 			font: basicFont,
 			fontSize: 32,
-			textColor: "black",
+			textColor: COLOR_TEXT,
 			textAlign: "left",
 			width: 0.9 * g.game.width,
 			x: 0.2 * g.game.width,
@@ -232,71 +272,65 @@ export class RecruitmentScene extends BaseScene {
 			}
 		});
 		entity.append(gameTermLabel);
-		const entryButton = new g.FilledRect({
-			scene: this,
-			cssColor: "gray",
+		const entryButton = this.createButtonEntity({
 			x: 0.25 * g.game.width,
 			y: 0.8 * g.game.height,
 			width: 0.2 * g.game.width,
 			height: 0.1 * g.game.height,
-			opacity: 0.5,
-			local: true,
-			touchable: true
-		});
-		const entryLabel = new Label({
-			scene: this,
-			text: "ゲームに参加",
-			font: basicFont,
+			label: "ゲームに参加",
 			fontSize: 20,
-			textColor: "white",
-			textAlign: "center",
-			width: entryButton.width,
-			y: 0.05 * entryButton.height,
-			local: true
+			baseColor: COLOR_BUTTON,
+			textColor: COLOR_TEXT
 		});
-		entryButton.onPointUp.add(() => {
-			entryButton.cssColor = "yellow";
-			entryButton.modified();
-			entryLabel.textColor = "red";
-			entryLabel.invalidate();
+		entryButton.entity.onPointUp.add(() => {
+			entryButton.rect.cssColor = COLOR_BUTTON_ACTIVE;
+			entryButton.rect.modified();
+			entryButton.label.textColor = "#2b1d06";
+			entryButton.label.invalidate();
 			this.entry.enter({
 				id: g.game.selfId,
 				name: "匿名" + Math.floor(1000 * g.game.localRandom.generate())
 			}, true);
 		});
-		entryButton.append(entryLabel);
-		entity.append(entryButton);
-		const cancelButton = new g.FilledRect({
-			scene: this,
-			cssColor: "gray",
+		this.attachButtonFeedback(entryButton.entity, {
+			onPress: () => {
+				entryButton.shine.opacity = 0.35;
+				entryButton.shine.modified();
+			},
+			onRelease: () => {
+				entryButton.shine.opacity = 0.22;
+				entryButton.shine.modified();
+			}
+		});
+		entity.append(entryButton.entity);
+		const cancelButton = this.createButtonEntity({
 			x: 0.55 * g.game.width,
 			y: 0.8 * g.game.height,
 			width: 0.2 * g.game.width,
 			height: 0.1 * g.game.height,
-			opacity: 0.5,
-			local: true,
-			touchable: true
-		});
-		const cancelLabel = new Label({
-			scene: this,
-			text: "参加キャンセル",
-			font: basicFont,
+			label: "参加キャンセル",
 			fontSize: 20,
-			textColor: "white",
-			textAlign: "center",
-			width: 0.2 * g.game.width,
-			y: 0.05 * cancelButton.height,
-			local: true
+			baseColor: COLOR_BUTTON,
+			textColor: COLOR_TEXT
 		});
-		cancelButton.onPointUp.add(() => {
-			entryButton.cssColor = "gray";
-			entryButton.modified();
-			entryLabel.textColor = "white";
-			entryLabel.invalidate();
+		cancelButton.entity.onPointUp.add(() => {
+			entryButton.rect.cssColor = COLOR_BUTTON;
+			entryButton.rect.modified();
+			entryButton.label.textColor = COLOR_TEXT;
+			entryButton.label.invalidate();
 			this.entry.cancel(g.game.selfId);
 		});
-		cancelButton.append(cancelLabel);
-		entity.append(cancelButton);
+		this.attachButtonFeedback(cancelButton.entity, {
+			onPress: () => {
+				cancelButton.shine.opacity = 0.35;
+				cancelButton.shine.modified();
+			},
+			onRelease: () => {
+				cancelButton.shine.opacity = 0.22;
+				cancelButton.shine.modified();
+			}
+		});
+		entity.append(cancelButton.entity);
 	
 		return entity;
 	}
@@ -304,12 +338,30 @@ export class RecruitmentScene extends BaseScene {
 	private createPlayerInfoEntity(area: g.CommonArea): g.E {
 		let entryCount = this.entry.getEnteredMenmberCount();
 		const entity = new g.E({scene: this, width: area.width, height: area.height, x: area.x, y: area.y, local: true});
+		const shadow = new g.FilledRect({
+			scene: this,
+			cssColor: COLOR_PANEL_SHADOW,
+			width: area.width,
+			height: area.height,
+			x: 0,
+			y: 6,
+			opacity: 0.6
+		});
+		entity.append(shadow);
+		const panel = new g.FilledRect({
+			scene: this,
+			cssColor: COLOR_PANEL,
+			width: area.width,
+			height: area.height,
+			opacity: 0.92
+		});
+		entity.append(panel);
 		const infoLabel = new Label({
 			scene: this,
 			text: `募集人数：${MAX_PLAYER_COUNT}人まで(${MIN_PLAYER_COUNT}人からプレー可)`,
 			font: basicFont,
 			fontSize: 36, // あくまで目安。あとで変えるかも
-			textColor: "black",
+			textColor: COLOR_TEXT,
 			textAlign: "center",
 			width: 0.8 * area.width,
 			x: 0.1 * area.width,
@@ -321,7 +373,7 @@ export class RecruitmentScene extends BaseScene {
 			text: `参加希望人数：${entryCount}人`,
 			font: basicFont,
 			fontSize: 32, // あくまで目安。あとで変えるかも
-			textColor: "black",
+			textColor: COLOR_TEXT,
 			textAlign: "center",
 			width: 0.8 * area.width,
 			x: 0.1 * area.width,
@@ -340,12 +392,30 @@ export class RecruitmentScene extends BaseScene {
 
 	private createSelectorEntity(area: g.CommonArea, title: string, selectorName: string, selectorItems: SelectorItem[], selected: number = 0): g.E {
 		const entity = new g.E({scene: this, x: area.x, y: area.y, width: area.width, height: area.height});
+		const shadow = new g.FilledRect({
+			scene: this,
+			cssColor: COLOR_PANEL_SHADOW,
+			width: area.width,
+			height: area.height,
+			x: 0,
+			y: 4,
+			opacity: 0.6
+		});
+		entity.append(shadow);
+		const panel = new g.FilledRect({
+			scene: this,
+			cssColor: COLOR_PANEL,
+			width: area.width,
+			height: area.height,
+			opacity: 0.9
+		});
+		entity.append(panel);
 		const titleLabel = new Label({
 			scene: this,
 			text: title,
 			font: basicFont,
 			fontSize: 32,
-			textColor: "black",
+			textColor: COLOR_TEXT,
 			textAlign: "left",
 			width: 0.2 * area.width,
 			height: area.height
@@ -354,53 +424,118 @@ export class RecruitmentScene extends BaseScene {
 		const buttonWidth = 0.18 * area.width;
 		const buttonHeight = 0.3 * buttonWidth;
 		const interval = 0.05 * area.width
-		const itemButtons: g.FilledRect[] = [];
+		const itemButtons: {
+			entity: g.E;
+			rect: g.FilledRect;
+			label: Label;
+			shine: g.FilledRect;
+		}[] = [];
 		for (let i = 0; i < selectorItems.length; i++) {
-			const itemButton = new g.FilledRect({
-				scene: this,
-				cssColor: i === selected ? "yellow" : "gray",
+			const itemButton = this.createButtonEntity({
 				x: 0.2 * area.width + i * buttonWidth + (i + 1) * interval,
 				y: (area.height - buttonHeight) / 2,
 				width: buttonWidth,
 				height: buttonHeight,
-				opacity: 0.5,
-				touchable: true
-			});
-			const itemLabel = new Label({
-				scene: this,
-				text: selectorItems[i].name,
-				font: basicFont,
+				label: selectorItems[i].name,
 				fontSize: 20,
-				textColor: i === selected ? "red" : "white",
-				textAlign: "center",
-				width: itemButton.width,
-				y: 0.2 * itemButton.height
+				baseColor: i === selected ? COLOR_BUTTON_ACTIVE : COLOR_BUTTON,
+				textColor: i === selected ? "#2b1d06" : COLOR_TEXT
 			});
-			itemButton.append(itemLabel);
+			itemButton.entity.opacity = 0.95;
+			this.attachButtonFeedback(itemButton.entity, {
+				onPress: () => {
+					itemButton.shine.opacity = 0.35;
+					itemButton.shine.modified();
+				},
+				onRelease: () => {
+					itemButton.shine.opacity = 0.22;
+					itemButton.shine.modified();
+				}
+			});
 			itemButtons.push(itemButton);
 		}
 		// ボタン押した時のイベントで他のボタンに影響を及ぼすためfor文を分けている
 		for (let i = 0; i < itemButtons.length; i++) {
 			const button = itemButtons[i];
-			button.onPointUp.add(() => {
+			button.entity.onPointUp.add(() => {
 				itemButtons.forEach(b => {
-					b.cssColor = "gray";
-					b.modified();
-					(b.children[0] as Label).textColor = "white";
-					(b.children[0] as Label).invalidate();
+					b.rect.cssColor = COLOR_BUTTON;
+					b.rect.modified();
+					b.label.textColor = COLOR_TEXT;
+					b.label.invalidate();
 				});
-				button.cssColor = "yellow";
-				button.modified();
-				(button.children[0] as Label).textColor = "red";
-				(button.children[0] as Label).invalidate();
+				button.rect.cssColor = COLOR_BUTTON_ACTIVE;
+				button.rect.modified();
+				button.label.textColor = "#2b1d06";
+				button.label.invalidate();
 				this.entry.setOptionData(selectorName, selectorItems[i].value);
 			});
-			entity.append(button);
+			entity.append(button.entity);
 		}
 		// とりあえず見た目との整合性のために選択されている選択肢は内部的にもセットしておく
 		if (0 <= selected && selected < selectorItems.length) {
 			this.entry.setOptionData(selectorName, selectorItems[selected].value);
 		}
 		return entity;
+	}
+
+	private createButtonEntity(params: {
+		x: number;
+		y: number;
+		width: number;
+		height: number;
+		label: string;
+		fontSize: number;
+		baseColor: string;
+		textColor: string;
+	}): { entity: g.E; rect: g.FilledRect; label: Label; shine: g.FilledRect } {
+		const entity = new g.E({
+			scene: this,
+			x: params.x,
+			y: params.y,
+			width: params.width,
+			height: params.height,
+			local: true,
+			touchable: true
+		});
+		const shadow = new g.FilledRect({
+			scene: this,
+			cssColor: COLOR_PANEL_SHADOW,
+			width: params.width,
+			height: params.height,
+			x: 0,
+			y: 4,
+			opacity: 0.7
+		});
+		entity.append(shadow);
+		const rect = new g.FilledRect({
+			scene: this,
+			cssColor: params.baseColor,
+			width: params.width,
+			height: params.height,
+			opacity: 0.95
+		});
+		entity.append(rect);
+		const shine = new g.FilledRect({
+			scene: this,
+			cssColor: "white",
+			width: params.width,
+			height: 0.25 * params.height,
+			opacity: 0.22
+		});
+		entity.append(shine);
+		const label = new Label({
+			scene: this,
+			text: params.label,
+			font: basicFont,
+			fontSize: params.fontSize,
+			textColor: params.textColor,
+			textAlign: "center",
+			width: params.width,
+			y: 0.2 * params.height,
+			local: true
+		});
+		entity.append(label);
+		return { entity, rect, label, shine };
 	}
 }

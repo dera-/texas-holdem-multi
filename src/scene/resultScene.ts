@@ -26,18 +26,42 @@ export class ResultScene extends BaseScene {
 	protected handlerToLoad(): void {
 		const backRect = new g.FilledRect({
 			scene: this,
-			cssColor: "white",
+			cssColor: "#0b2a1f",
 			width: g.game.width,
 			height: g.game.height
 		});
 		this.append(backRect);
+		const band = new g.FilledRect({
+			scene: this,
+			cssColor: "#d4af37",
+			width: 1.2 * g.game.width,
+			height: 0.14 * g.game.height,
+			x: -0.1 * g.game.width,
+			y: 0.08 * g.game.height,
+			opacity: 0.12,
+			angle: -8
+		});
+		this.append(band);
 		// result画面のタイトル
+		const gameTitleShadowLabel = new Label({
+			scene: this,
+			text: `${getGameModeName(this.gameMode)}結果`,
+			font: basicFont,
+			fontSize: 44, // あくまで目安。あとで変えるかも
+			textColor: "black",
+			textAlign: "center",
+			width: 0.9 * g.game.width,
+			x: 0.05 * g.game.width + 3,
+			y: 0.05 * g.game.width + 3,
+			opacity: 0.5
+		});
+		this.append(gameTitleShadowLabel);
 		const gameTitleLabel = new Label({
 			scene: this,
 			text: `${getGameModeName(this.gameMode)}結果`,
 			font: basicFont,
-			fontSize: 42, // あくまで目安。あとで変えるかも
-			textColor: "black",
+			fontSize: 44, // あくまで目安。あとで変えるかも
+			textColor: "#f5d76e",
 			textAlign: "center",
 			width: 0.9 * g.game.width,
 			x: 0.05 * g.game.width,
@@ -57,7 +81,7 @@ export class ResultScene extends BaseScene {
 				text: resultStr,
 				font: basicFont,
 				fontSize: 24, // あくまで目安。あとで変えるかも
-				textColor: "black",
+				textColor: "#f7f2e8",
 				textAlign: "center",
 				width: 0.6 * g.game.width,
 				x: 0.2 * g.game.width,
@@ -93,6 +117,16 @@ export class ResultScene extends BaseScene {
 			width: 0.3 * g.game.width
 		});
 		returnButtonSprite.append(returnButtonLabel);
+		this.attachButtonFeedback(returnButtonSprite, {
+			onPress: () => {
+				returnButtonLabel.textColor = "#f5d76e";
+				returnButtonLabel.invalidate();
+			},
+			onRelease: () => {
+				returnButtonLabel.textColor = "white";
+				returnButtonLabel.invalidate();
+			}
+		});
 		this.append(returnButtonSprite);
 	}
 }
