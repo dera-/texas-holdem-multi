@@ -25,6 +25,8 @@ export abstract class BaseScene extends g.Scene {
 			pressedOpacity?: number;
 			onPress?: () => void;
 			onRelease?: () => void;
+			soundId?: string;
+			soundVolume?: number;
 		}
 	): void {
 		const baseX = entity.x || 0;
@@ -36,6 +38,11 @@ export abstract class BaseScene extends g.Scene {
 		const pressedOffsetY = options?.pressedOffsetY ?? 2;
 		const pressedOpacity = options?.pressedOpacity ?? 0.9;
 		entity.onPointDown.add(() => {
+			if (options?.soundId) {
+				this.playSound(options.soundId, options.soundVolume ?? 0.6);
+			} else {
+				this.playSound("cursor7", 0.5);
+			}
 			entity.scaleX = baseScaleX * pressedScale;
 			entity.scaleY = baseScaleY * pressedScale;
 			entity.y = baseY + pressedOffsetY;
@@ -55,6 +62,25 @@ export abstract class BaseScene extends g.Scene {
 				options.onRelease();
 			}
 		});
+	}
+
+	protected playSound(id: string, volume: number = 0.6): void {
+		try {
+			const audio = this.asset.getAudioById(id);
+			if (!audio) {
+				return;
+			}
+			const player = audio.play();
+			if (player) {
+				if ((player as any).changeVolume) {
+					(player as any).changeVolume(volume);
+				} else {
+					(player as any).volume = volume;
+				}
+			}
+		} catch (_e) {
+			// ignore missing audio assets
+		}
 	}
 
 	getCurrentStatus(): AllStatus {

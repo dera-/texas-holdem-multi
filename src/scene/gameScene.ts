@@ -286,12 +286,31 @@ export class GameScene extends BaseScene {
 				actionName = this.service.isCheck() ? CHECK : (this.service.isAllin() ? ALLIN : CALL);
 				break;
 		}
+		this.playActionSound(actionName);
 		if (action.value > 0) {
 			this.labels[PLAYER_ACTION_PREFIX_KEY + playerId].text = action.name + " " + action.value;
 		} else {
 			this.labels[PLAYER_ACTION_PREFIX_KEY + playerId].text = action.name;
 		}
 		this.labels[PLAYER_ACTION_PREFIX_KEY + playerId].invalidate();
+	}
+
+	private playActionSound(actionName: string): void {
+		switch (actionName) {
+			case CHECK:
+				this.playSound("money_drop1", 0.35);
+				break;
+			case CALL:
+				this.playSound("money_drop2", 0.45);
+				break;
+			case RAISE:
+			case BET:
+				this.playSound("wallet1", 0.55);
+				break;
+			case ALLIN:
+				this.playSound("wallet_close1", 0.7);
+				break;
+		}
 	}
 
 	focusCurrentPlayer(isFocus: boolean): void {
@@ -731,7 +750,7 @@ export class GameScene extends BaseScene {
 			text: "POT: " + this.service.getPotValue(),
 			font: basicFont,
 			fontSize: 0.03 * width, // あくまで目安。あとで変えるかも
-			textColor: "black",
+			textColor: "#f7f2e8",
 			textAlign: "center",
 			width: 0.2 * width,
 			x: 0.4 * width,
@@ -885,7 +904,7 @@ export class GameScene extends BaseScene {
 			text: "",
 			font: basicFont,
 			fontSize: 36, // あくまで目安。あとで変えるかも
-			textColor: "black",
+			textColor: "#e5e1d6",
 			textAlign: "left",
 			width: width
 		});
@@ -902,7 +921,7 @@ export class GameScene extends BaseScene {
 			text: "SB/BB: ",
 			font: basicFont,
 			fontSize: 36,
-			textColor: "black",
+			textColor: "#e5e1d6",
 			textAlign: "left",
 			width: 0.5 * width
 		});
@@ -913,7 +932,7 @@ export class GameScene extends BaseScene {
 			text: "TIME: ",
 			font: basicFont,
 			fontSize: 36,
-			textColor: "black",
+			textColor: "#e5e1d6",
 			textAlign: "left",
 			x: 0.5 * width,
 			width: 0.5 * width

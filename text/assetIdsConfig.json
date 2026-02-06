@@ -62,8 +62,13 @@
         "s13",
         "z01",
         "z02",
-        "gameSceneConfig"
+        "gameSceneConfig",
+        "cursor7",
+        "money_drop1",
+        "money_drop2",
+        "wallet1",
+        "wallet_close1"
     ],
-    "result": ["button"],
-    "recruitment": ["button"]
+    "result": ["button", "cursor7"],
+    "recruitment": ["button", "cursor7"]
 }

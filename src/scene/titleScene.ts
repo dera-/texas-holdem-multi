@@ -124,7 +124,7 @@ export class TitleScene extends BaseScene {
 			// if (this.isCpuMode) {
 			// 	g.game.pushScene(new RuleScene({ game: g.game, assetIds: ["structuresConfig"] }));
 			// } else {
-				g.game.pushScene(new RecruitmentScene({ game: g.game, assetIds: ["structuresConfig", "chip"] }));
+				g.game.pushScene(new RecruitmentScene({ game: g.game, assetIds: ["structuresConfig", "chip", "cursor7"] }));
 			// }
 		}, time);
 	}
