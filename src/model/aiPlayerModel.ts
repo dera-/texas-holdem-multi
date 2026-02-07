@@ -5,13 +5,16 @@ export type AiType = "call" | "min-raise" | "random"
 
 export interface AiPlayerModelParameterObject extends PlayerModelParameterObject {
 	aiType: AiType;
+	random?: g.RandomGenerator;
 }
 
 export class AiPlayerModel extends PlayerModel {
 	private aiType: AiType;
+	private random: g.RandomGenerator;
 	constructor(param: AiPlayerModelParameterObject) {
 		super(param);
 		this.aiType = param.aiType;
+		this.random = param.random || g.game.random;
 	}
 
 	decideAction(callValue: number, minimumRaiseValue: number): void {
@@ -32,7 +35,7 @@ export class AiPlayerModel extends PlayerModel {
 	private getRandomAction(callValue: number, minimumRaiseValue: number): ActionModel {
 		// 最小RAISEかCALLかFOLD
 		const actions: TexasHoldemAction[] = ["RAISE", "CALL", "FOLD"];
-		const randomValue = g.game.random.generate();
+		const randomValue = this.random.generate();
 		const rate = 1 / actions.length;
 		let selected: TexasHoldemAction = "FOLD";
 		for (let i = 0; i < actions.length; i++) {

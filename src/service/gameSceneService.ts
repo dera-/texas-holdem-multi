@@ -22,6 +22,7 @@ export interface GameSceneServiceParameterObject {
 	mode: GameMode;
 	players: PlayerModelParameterObject[];
 	structure: StructureModelParameterObject;
+	random?: g.RandomGenerator;
 }
 
 export interface PlayerRank {
@@ -52,17 +53,19 @@ export class GameSceneService {
 	private actionPhase: TexasHoldemPhase;
 	private initialiPlayersCount: number;
 	private gameMode: GameMode;
+	private random: g.RandomGenerator;
 
 	constructor(param: GameSceneServiceParameterObject) {
+		this.random = param.random || g.game.random;
 		this.playerModels = param.players.map(p => { 
 			if ((p as AiPlayerModelParameterObject).aiType) {
-				return new AiPlayerModel(p as AiPlayerModelParameterObject);
+				return new AiPlayerModel({ ...(p as AiPlayerModelParameterObject), random: this.random });
 			} else {
 				return new PlayerModel(p);
 			}
 		});
 		this.boardModel = new BoardModel();
-		this.dealerModel = new DealerModel(generateCardModels());
+		this.dealerModel = new DealerModel(generateCardModels(), this.random);
 		this.structureModel = new StructureModel(param.structure);
 		
 		this.currentPlayerIndex = 0;
@@ -71,7 +74,7 @@ export class GameSceneService {
 		this.minRaiseValue = this.currentCallValue * 2;
 		this.actionPhase = TexasHoldemPhase.PRE_FLOP;
 		this.initialiPlayersCount = this.playerModels.length;
-		const bbIndex = Math.floor(this.initialiPlayersCount * g.game.random.generate());
+		const bbIndex = Math.floor(this.initialiPlayersCount * this.random.generate());
 		this.bbSeatNumber = this.playerModels[bbIndex].getSeatNumber();
 		this.sbSeatNumber = NON_EXIST_SEAT_NUMBER;
 		this.dealerSeatNumber = NON_EXIST_SEAT_NUMBER;

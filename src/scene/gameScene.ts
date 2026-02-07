@@ -17,6 +17,8 @@ import { OneGameResultModel } from "../model/oneGameResultModel";
 
 export interface GameScenePrameterObject extends g.SceneParameterObject {
 	service: GameSceneServiceParameterObject;
+	isCpuMode?: boolean;
+	cpuReserved?: boolean;
 }
 
 interface GameButtonKeyText {
@@ -117,6 +119,8 @@ export class GameScene extends BaseScene {
 	private gameStructureEntity: g.E;
 	private cardAssetConfig: g.ImageAssetConfigurationBase;
 	private buttonAssetConfig: g.ImageAssetConfigurationBase;
+	private isCpuMode: boolean;
+	private cpuReserved: boolean;
 
 	constructor(param: GameScenePrameterObject) {
 		super(param);
@@ -126,6 +130,8 @@ export class GameScene extends BaseScene {
 		this.service = new GameSceneService(param.service);
 		this.cardAssetConfig = g.game._configuration.assets["z02"] as g.ImageAssetConfigurationBase;
 		this.buttonAssetConfig = g.game._configuration.assets["button"] as g.ImageAssetConfigurationBase;
+		this.isCpuMode = !!param.isCpuMode;
+		this.cpuReserved = !!param.cpuReserved;
 	}
 
 	getService(): GameSceneService {
@@ -188,7 +194,9 @@ export class GameScene extends BaseScene {
 
 	setCardsAndButton(): void {
 		const initialPlayersCount = this.service.getInitialPlayersCount();
-		const myself = this.service.getPlayerById(g.game.selfId);
+		const selfId = g.game.selfId;
+		const isAudience = selfId == null || this.service.isAudience(selfId);
+		const myself = selfId == null ? null : this.service.getPlayerById(selfId);
 		const startNum = myself ? myself.getSeatNumber() : TOP_SEAT_NUMBER;
 		for (let i = 0; i < initialPlayersCount; i++) {
 			const player = this.service.getPlayerBySeatNumber((startNum + i) % initialPlayersCount);
@@ -197,7 +205,8 @@ export class GameScene extends BaseScene {
 			}
 			const playerId = player.getId();
 			const cardSpriteBaseKey = CARD_PREFIX_KEY + playerId;
-			const cardAssets: g.ImageAsset[] = g.game.selfId === undefined || this.service.isAudience(g.game.selfId) || playerId === g.game.selfId ?
+			const canSeeHand = isAudience || selfId === playerId;
+			const cardAssets: g.ImageAsset[] = canSeeHand ?
 				this.getCardAssets(player) : [this.asset.getImageById("z02"), this.asset.getImageById("z02")];
 			for (let j = 0; j < 2; j++) {
 				this.sprites[cardSpriteBaseKey + "_" + j]._surface = g.SurfaceUtil.asSurface(cardAssets[j]);
@@ -314,7 +323,11 @@ export class GameScene extends BaseScene {
 	}
 
 	focusCurrentPlayer(isFocus: boolean): void {
-		const playerId = this.service.getCurrentPlayer().getId();
+		const player = this.service.getCurrentPlayer();
+		if (!player) {
+			return;
+		}
+		const playerId = player.getId();
 		if (isFocus) {
 			this.rects[PLAYER_FOCUS_PREFIX_KEY + playerId].show();
 		} else {
@@ -325,6 +338,9 @@ export class GameScene extends BaseScene {
 
 	showPokerController(): void {
 		const player = this.service.getCurrentPlayer();
+		if (!player) {
+			return;
+		}
 		const playerId = player.getId();
 		if (playerId === g.game.selfId) {
 			this.pokerControllerEntity.show();
@@ -335,6 +351,9 @@ export class GameScene extends BaseScene {
 	hidePokerController(): void {
 		this.pokerControllerEntity.hide();
 		const player = this.service.getCurrentPlayer();
+		if (!player) {
+			return;
+		}
 		const playerId = player.getId();
 		if (playerId === g.game.selfId) {
 			this.rects[PLAYER_REMAINING_TIME_PREFIX_KEY + playerId].cssColor = "blue";
@@ -533,11 +552,61 @@ export class GameScene extends BaseScene {
 		this.pokerControllerEntity = this.createPokerControllerEntity({ x: 0.05 * g.game.width, y: 0.8 * g.game.height, width: 0.9 * g.game.width, height: 0.1 * g.game.height });
 		this.pokerControllerEntity.hide();
 		this.append(this.pokerControllerEntity);
+		if (this.isCpuMode) {
+			this.append(this.createCpuOverlayEntity());
+		}
 		this.onUpdate.add(createLoopHandler(this));
 		this.onMessage.add(createMessageHandler(this));
+		if (this.isCpuMode) {
+			this.onMessage.add(this.handleCpuMessage, this);
+		}
 
 		// ゲーム開始
 		this.pushStatuses(["GAME_START"]);
+	}
+
+	private createCpuOverlayEntity(): g.E {
+		const entity = new g.E({ scene: this, width: g.game.width, height: g.game.height, local: true });
+		const backButton = new g.FilledRect({
+			scene: this,
+			cssColor: "#1b4b32",
+			x: 0.72 * g.game.width,
+			y: 0.07 * g.game.height,
+			width: 0.16 * g.game.width,
+			height: 0.055 * g.game.height,
+			opacity: 0.95,
+			local: true,
+			touchable: true
+		});
+		const backLabel = new Label({
+			scene: this,
+			text: "戻る",
+			font: basicFont,
+			fontSize: 20,
+			textColor: "#f7f2e8",
+			textAlign: "center",
+			width: backButton.width,
+			y: 0.16 * backButton.height,
+			local: true
+		});
+		backButton.append(backLabel);
+		this.attachButtonFeedback(backButton);
+		backButton.onPointUp.add(() => {
+			g.game.popScene();
+		});
+		entity.append(backButton);
+
+		return entity;
+	}
+
+	private handleCpuMessage(ev: g.MessageEvent): void {
+		if (!ev.data || !ev.data.message) {
+			return;
+		}
+		if (ev.data.message === "START_GAME_COUNTDOWN") {
+			(g.game.vars as any).forceCountdown = ev.data;
+			g.game.popScene();
+		}
 	}
 
 	private createPokerControllerEntity(area: g.CommonArea): g.E {

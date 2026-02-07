@@ -4,6 +4,7 @@ import { PlayerModelParameterObject } from "../model/playerModel";
 import { AssetIds } from "../type/assetIds";
 import { BaseScene, basicFont } from "./baseScene";
 import { GameScene } from "./gameScene";
+import { AiPlayerModelParameterObject } from "../model/aiPlayerModel";
 import { GameMode, GameTerm } from "../type/gameMode";
 import { StructureData } from "../model/structureModel";
 
@@ -39,6 +40,14 @@ export class RecruitmentScene extends BaseScene {
 	private entry: tool.AkashicEntry;
 	private gameMode: GameMode;
 	private gameTerm: GameTerm;
+	private countdownEntity: g.E | null = null;
+	private countdownLabel: Label | null = null;
+	private countdownRemaining: number = 0;
+	private countdownTimerId: g.TimerIdentifier | null = null;
+	private countdownRunning: boolean = false;
+	private countdownFinished: boolean = false;
+	private countdownStartAt: number | null = null;
+	private pendingMembers: tool.PlayerInfo[] | null = null;
 
 	constructor(param: RecruitmentScenePrameterObject) {
 		super(param);
@@ -51,9 +60,19 @@ export class RecruitmentScene extends BaseScene {
 			startableCount: MIN_PLAYER_COUNT,
 			premiumuRate: 3,
 			callbackAfterDicision: (members: tool.PlayerInfo[]) => {
-				// とりあえずリングゲームを固定で作る感じで
-				// TODO: 配信者側からリングかトナメか選べるようにする。その場合、ゲーム側でもトナメ(やリング)専用の処理を書く必要がある。
-				g.game.pushScene(this.createGameScene(members));
+				if (!this.countdownFinished) {
+					this.pendingMembers = members;
+					if (!this.countdownRunning) {
+						if (this.countdownStartAt == null) {
+							this.countdownStartAt = g.game.age;
+						}
+						const passed = Math.max(0, Math.floor((g.game.age - this.countdownStartAt) / g.game.fps));
+						const remaining = Math.max(1, 5 - passed);
+						this.startCountdown(remaining);
+					}
+					return;
+				}
+				this.startGameWithMembers(members);
 			}
 		});
 	}
@@ -104,6 +123,12 @@ export class RecruitmentScene extends BaseScene {
 		const audienceEntity = this.createAudiencePane();
 		let isJoined: boolean = false;
 		this.append(audienceEntity);
+		this.onMessage.add(this.handleMessage, this);
+		const forced = (g.game.vars as any).forceCountdown;
+		if (forced && !this.countdownRunning) {
+			this.handleMessage(new g.MessageEvent(forced));
+			(g.game.vars as any).forceCountdown = null;
+		}
 		this.onUpdate.add(() => {
 			if (g.game.joinedPlayerIds.indexOf(g.game.selfId) !== -1) {
 				if (!isJoined) {
@@ -199,8 +224,10 @@ export class RecruitmentScene extends BaseScene {
 		startButton.entity.opacity = 0.85;
 		startButton.entity.onPointUp.add(() => {
 			// TODO: 参加希望2人未満ならボタンをdisableにする
-			if (this.entry.getEnteredMenmberCount() >= 2) {
-				this.entry.decidePlayableMembers();
+			if (this.entry.getEnteredMenmberCount() >= 2 && !this.countdownRunning) {
+				const payload = { message: "START_GAME_COUNTDOWN", startAt: g.game.age };
+				g.game.raiseEvent(new g.MessageEvent(payload));
+				this.handleMessage(new g.MessageEvent(payload));
 			}
 		});
 		this.attachButtonFeedback(startButton.entity, {
@@ -214,6 +241,30 @@ export class RecruitmentScene extends BaseScene {
 			}
 		});
 		entity.append(startButton.entity);
+		const cpuButton = this.createButtonEntity({
+			x: 0.1 * g.game.width,
+			y: 0.8 * g.game.height,
+			width: 0.22 * g.game.width,
+			height: 0.1 * g.game.height,
+			label: "CPUと対戦",
+			fontSize: 20,
+			baseColor: COLOR_BUTTON,
+			textColor: COLOR_TEXT
+		});
+		cpuButton.entity.onPointUp.add(() => {
+			this.startCpuGame();
+		});
+		this.attachButtonFeedback(cpuButton.entity, {
+			onPress: () => {
+				cpuButton.shine.opacity = 0.35;
+				cpuButton.shine.modified();
+			},
+			onRelease: () => {
+				cpuButton.shine.opacity = 0.22;
+				cpuButton.shine.modified();
+			}
+		});
+		entity.append(cpuButton.entity);
 
 		return entity;
 	}
@@ -331,6 +382,30 @@ export class RecruitmentScene extends BaseScene {
 			}
 		});
 		entity.append(cancelButton.entity);
+		const cpuButton = this.createButtonEntity({
+			x: 0.04 * g.game.width,
+			y: 0.8 * g.game.height,
+			width: 0.19 * g.game.width,
+			height: 0.1 * g.game.height,
+			label: "CPUと対戦",
+			fontSize: 18,
+			baseColor: COLOR_BUTTON,
+			textColor: COLOR_TEXT
+		});
+		cpuButton.entity.onPointUp.add(() => {
+			this.startCpuGame();
+		});
+		this.attachButtonFeedback(cpuButton.entity, {
+			onPress: () => {
+				cpuButton.shine.opacity = 0.35;
+				cpuButton.shine.modified();
+			},
+			onRelease: () => {
+				cpuButton.shine.opacity = 0.22;
+				cpuButton.shine.modified();
+			}
+		});
+		entity.append(cpuButton.entity);
 	
 		return entity;
 	}
@@ -477,6 +552,148 @@ export class RecruitmentScene extends BaseScene {
 			this.entry.setOptionData(selectorName, selectorItems[selected].value);
 		}
 		return entity;
+	}
+
+	private handleMessage(ev: g.MessageEvent): void {
+		if (!ev.data || !ev.data.message) {
+			return;
+		}
+		if (ev.data.message === "START_GAME_COUNTDOWN") {
+			if (this.countdownRunning) {
+				return;
+			}
+			const startAt = typeof ev.data.startAt === "number" ? ev.data.startAt : g.game.age;
+			if (this.countdownStartAt == null) {
+				this.countdownStartAt = startAt;
+			}
+			const passed = Math.max(0, Math.floor((g.game.age - this.countdownStartAt) / g.game.fps));
+			const remaining = Math.max(1, 5 - passed);
+			this.startCountdown(remaining);
+			if (g.game.joinedPlayerIds.indexOf(g.game.selfId) !== -1) {
+				this.entry.decidePlayableMembers();
+			}
+		}
+	}
+
+	private startCountdown(seconds: number): void {
+		this.countdownRunning = true;
+		this.countdownFinished = false;
+		this.countdownRemaining = seconds;
+		if (!this.countdownEntity) {
+			this.countdownEntity = new g.E({ scene: this, width: g.game.width, height: g.game.height, local: true });
+			const mask = new g.FilledRect({
+				scene: this,
+				cssColor: "black",
+				width: g.game.width,
+				height: g.game.height,
+				opacity: 0.45
+			});
+			this.countdownEntity.append(mask);
+			this.countdownLabel = new Label({
+				scene: this,
+				text: "",
+				font: basicFont,
+				fontSize: 96,
+				textColor: "#f5d76e",
+				textAlign: "center",
+				width: g.game.width,
+				y: 0.38 * g.game.height,
+				local: true
+			});
+			this.countdownEntity.append(this.countdownLabel);
+		}
+		this.updateCountdownLabel();
+		this.append(this.countdownEntity);
+		if (this.countdownTimerId) {
+			this.clearInterval(this.countdownTimerId);
+		}
+		this.countdownTimerId = this.setInterval(() => {
+			this.countdownRemaining -= 1;
+			if (this.countdownRemaining <= 0) {
+				this.finishCountdown();
+				return;
+			}
+			this.updateCountdownLabel();
+		}, 1000);
+	}
+
+	private updateCountdownLabel(): void {
+		if (!this.countdownLabel) {
+			return;
+		}
+		this.countdownLabel.text = `開始まで ${this.countdownRemaining}`;
+		this.countdownLabel.invalidate();
+	}
+
+	private finishCountdown(): void {
+		this.countdownFinished = true;
+		this.countdownRunning = false;
+		if (this.countdownTimerId) {
+			this.clearInterval(this.countdownTimerId);
+			this.countdownTimerId = null;
+		}
+		if (this.countdownEntity) {
+			this.remove(this.countdownEntity);
+		}
+		if (this.pendingMembers) {
+			this.startGameWithMembers(this.pendingMembers);
+		}
+	}
+
+	private startGameWithMembers(members: tool.PlayerInfo[]): void {
+		// とりあえずリングゲームを固定で作る感じで
+		// TODO: 配信者側からリングかトナメか選べるようにする。その場合、ゲーム側でもトナメ(やリング)専用の処理を書く必要がある。
+		this.countdownRunning = false;
+		g.game.pushScene(this.createGameScene(members));
+	}
+
+	private startCpuGame(): void {
+		const assetIds = (JSON.parse((g.game.assets["assetIdsConfig"] as g.TextAsset).data) as AssetIds).game;
+		const structuresMap = JSON.parse(this.asset.getTextById("structuresConfig").data);
+		const reserved = g.game.joinedPlayerIds.indexOf(g.game.selfId) !== -1;
+		g.game.pushScene(new GameScene({
+			game: g.game,
+			assetIds,
+			isCpuMode: true,
+			cpuReserved: reserved,
+			service: {
+				mode: "ring",
+				random: g.game.localRandom,
+				players: [
+					{
+						id: g.game.selfId,
+						name: "プレイヤー",
+						stack: 10000, // 一旦固定
+						seatNumber: 0
+					},
+					{
+						id: g.game.selfId + "0",
+						name: "コールくん",
+						stack: 10000, // 一旦固定
+						seatNumber: 1,
+						aiType: "call"
+					} as AiPlayerModelParameterObject,
+					{
+						id: g.game.selfId + "1",
+						name: "レイズちゃん",
+						stack: 10000, // 一旦固定
+						seatNumber: 2,
+						aiType: "min-raise"
+					} as AiPlayerModelParameterObject,
+					{
+						id: g.game.selfId + "2",
+						name: "ランダムさん",
+						stack: 10000, // 一旦固定
+						seatNumber: 3,
+						aiType: "random"
+					} as AiPlayerModelParameterObject
+				],
+				structure: {
+					structures: structuresMap["ring-short"],
+					currentIndex: 0
+				}
+			}
+		}));
 	}
 
 	private createButtonEntity(params: {

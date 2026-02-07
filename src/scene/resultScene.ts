@@ -2,6 +2,7 @@ import { Label } from "@akashic-extension/akashic-label";
 import { PlayerResultModel } from "../model/playerResultModel";
 import { GameMode, getGameModeName } from "../type/gameMode";
 import { BaseScene, basicFont } from "./baseScene";
+import { AiPlayerModel } from "../model/aiPlayerModel";
 
 export interface ResultScenePrameterObject extends g.SceneParameterObject {
 	playerResults: PlayerResultModel[];
@@ -12,6 +13,7 @@ export class ResultScene extends BaseScene {
 	private playerResults: PlayerResultModel[];
 	private gameMode: GameMode;
 	private buttonAssetConfig: g.ImageAssetConfigurationBase;
+	private isCpuGame: boolean;
 
 	constructor(param: ResultScenePrameterObject) {
 		super(param);
@@ -21,6 +23,7 @@ export class ResultScene extends BaseScene {
 		this.playerResults = param.playerResults.sort((a, b) => a.place - b.place);
 		this.gameMode = param.gameMode;
 		this.buttonAssetConfig = g.game._configuration.assets["button"] as g.ImageAssetConfigurationBase;
+		this.isCpuGame = this.playerResults.some(result => result.player instanceof AiPlayerModel);
 	}
 
 	protected handlerToLoad(): void {
@@ -102,14 +105,18 @@ export class ResultScene extends BaseScene {
 			y: (0.24 + this.playerResults.length * 0.07) * g.game.height
 		});
 		returnButtonSprite.onPointUp.add((ev) => {
-			// joinedPlayerが不在でこのシーンまで来たらCPU戦という想定でこの条件式にしているが問題があったら修正する
-			if (g.game.joinedPlayerIds.length === 0 || g.game.joinedPlayerIds.indexOf(ev.player.id) !== -1) {
+			if (this.isCpuGame) {
+				g.game.popScene(false, 2); // ゲームシーン、募集シーンという感じで並んでいるので募集まで2つ戻る
+				return;
+			}
+			// 配信者のみ戻れる
+			if (g.game.joinedPlayerIds.indexOf(ev.player.id) !== -1) {
 				g.game.popScene(false, 3); // ゲームシーン、募集シーン、タイトルシーンという感じで並んでいるのでタイトルまでは3つ戻る
 			}
 		});
 		const returnButtonLabel = new Label({
 			scene: this,
-			text: g.game.joinedPlayerIds.length === 0 ? "タイトルへ戻る" : "タイトルへ戻る\n(配信者のみ選択可能)",
+			text: this.isCpuGame ? "募集画面へ戻る" : "タイトルへ戻る\n(配信者のみ選択可能)",
 			font: basicFont,
 			fontSize: 28, // あくまで目安。あとで変えるかも
 			textColor: "white",

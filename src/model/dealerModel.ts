@@ -3,10 +3,12 @@ import { CardModel } from "./cardModel";
 export class DealerModel {
 	cards: CardModel[];
 	index: number;
+	private random: g.RandomGenerator;
 
-	constructor(cards: CardModel[]) {
+	constructor(cards: CardModel[], random?: g.RandomGenerator) {
 		this.cards = cards;
 		this.index = 0;
+		this.random = random || g.game.random;
 		this.shuffleCards();
 	}
 
@@ -15,7 +17,7 @@ export class DealerModel {
 		let shuffledCards = [],
 			cloneCards = [].concat(this.cards);
 		while (cloneCards.length > 0) {
-			let index = Math.floor(g.game.random.generate() * cloneCards.length);
+			let index = Math.floor(this.random.generate() * cloneCards.length);
 			shuffledCards.push(cloneCards[index]);
 			cloneCards.splice(index, 1);
 		}

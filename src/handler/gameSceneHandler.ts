@@ -154,6 +154,9 @@ export const createMessageHandler = (scene: GameScene) => {
 			const service = scene.getService();
 			const player = service.getPlayerById(ev.data.playerId);
 			const actionModel = ev.data.playerAction;
+			if (!player || !actionModel) {
+				return;
+			}
 			player.setAction(actionModel.name, actionModel.value);
 			player.resetRemainingTime();
 			scene.hidePokerController();
